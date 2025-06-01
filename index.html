@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title> Stock Analysis Web Application for Analytic Insight and Prediction</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="errorBox">
+    <span id="errorMsg">—</span>
+    <button id="reportBtn">Report</button>
+  </div>
+  <div id="notifBox">
+    <div class="title" id="notifTitle"></div>
+    <div id="notifDetails"></div>
+    <div class="profit" id="notifProfit"></div>
+  </div>
+
+  <header class="navbar">
+    <h1>Stock Analysis</h1>
+    <input id="symbolInput" placeholder="e.g. AAPL" value="AAPL" />
+    <button id="searchBtn" class="btn btn-primary">Search</button>
+    <button id="toggleTheme" class="btn btn-toggle">🌙</button>
+  </header>
+
+  <main>
+    <div class="chart-wrapper">
+      <div id="chartdiv"></div>
+      <canvas id="drawCanvas" style="display:none;"></canvas>
+      <div id="pointActions">
+        <span id="pointPrice">$0.00</span>
+        <input id="buyAmount" type="number" min="1" placeholder="Qty" />
+        <button id="buyBtn">Buy</button>
+        <button id="sellBtn">Sell</button>
+        <button id="highlightBtn">Highlight</button>
+      </div>
+      <div id="selectHint">Select a point on the chart</div>
+    </div>
+
+    <div class="controls-bottom">
+      <label><input type="checkbox" id="chkClose" checked /> Close</label>
+      <label><input type="checkbox" id="chkCandle" /> Candlestick</label>
+      <label><input type="checkbox" id="chkVolume" /> Volume</label>
+      <label><input type="checkbox" id="chkSMA" checked /> SMA(10)</label>
+      <label><input type="checkbox" id="chkRSI" /> RSI(14)</label>
+      <label><input type="checkbox" id="chkMACD" /> MACD</label>
+      <label><input type="checkbox" id="chkPred" /> Prediction</label>
+      <button id="freeDrawBtn">Free Draw</button>
+      <button id="undoBtn">Undo</button>
+      <button id="clearDrawBtn">Clear Drawing</button>
+    </div>
+
+    <div class="metrics">
+      <div class="card"><h2>SMA (10)</h2><p id="cardSMA">–</p></div>
+      <div class="card"><h2>RSI (14)</h2><p id="cardRSI">–</p></div>
+      <div class="card"><h2>MACD</h2><p id="cardMACD">–</p></div>
+      <div class="card"><h2>Next Price</h2><p id="cardPred">–</p></div>
+    </div>
+  </main>
+
+  <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
+  <script src="https://cdn.amcharts.com/lib/5/xy.js"></script>
+  <script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
+  <script src="https://cdn.amcharts.com/lib/5/themes/Dark.js"></script>
+
+  <script src="script.js"></script>
+</body>
+</html>

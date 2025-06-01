@@ -1,0 +1,221 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+body {
+  font-family: Arial, sans-serif;
+  background: #121212;
+  color: #eee;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  transition: background 0.3s, color 0.3s;
+}
+.navbar {
+  background: #1f1f1f;
+  padding: 16px;
+  text-align: center;
+}
+.navbar h1 {
+  font-size: 1.6rem;
+  display: inline-block;
+  margin-right: 8px;
+}
+.navbar input {
+  padding: 8px;
+  width: 200px;
+  border-radius: 4px;
+  border: 1px solid #444;
+  background: #222;
+  color: #eee;
+  margin-right: 8px;
+}
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.btn-primary {
+  background: #007bff;
+  color: #fff;
+}
+.btn-primary:hover {
+  background: #0056b3;
+}
+.btn-toggle {
+  background: #6c757d;
+  color: #fff;
+  margin-left: 8px;
+}
+.btn-toggle:hover {
+  background: #5a6268;
+}
+
+main {
+  flex: 1;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.chart-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 960px;
+}
+#chartdiv {
+  height: 500px;
+}
+
+/* Action panel on point click */
+#pointActions {
+  position: absolute;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 8px;
+  border-radius: 4px;
+  z-index: 1000;
+}
+#pointActions span {
+  color: #fff;
+  font-weight: bold;
+}
+#pointActions input {
+  width: 60px;
+  padding: 4px;
+  border: none;
+  border-radius: 4px;
+  text-align: center;
+}
+#pointActions button {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #fff;
+}
+#buyBtn {
+  background: #28a745;
+}
+#sellBtn {
+  background: #dc3545;
+}
+#highlightBtn {
+  background: #ffc107;
+  color: #000;
+}
+
+.controls-bottom {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+.controls-bottom label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: inherit;
+}
+.controls-bottom button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  background: #17a2b8;
+  color: #fff;
+  cursor: pointer;
+}
+.controls-bottom button:hover {
+  background: #0f6674;
+}
+
+.metrics {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 20px;
+}
+.card {
+  background: #1f1f1f;
+  padding: 16px;
+  border-radius: 8px;
+  text-align: center;
+  width: 120px;
+}
+.card h2 {
+  font-size: 1rem;
+  color: #bbb;
+  margin-bottom: 8px;
+}
+.card p {
+  font-size: 1.4rem;
+  color: #fff;
+}
+
+#errorBox {
+  display: none;
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  background: #b71c1c;
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 4px;
+  z-index: 1000;
+}
+#errorBox button {
+  background: #fff;
+  color: #b71c1c;
+  border: none;
+  padding: 4px 8px;
+  margin-left: 8px;
+  cursor: pointer;
+}
+
+#notifBox {
+  display: none;
+  position: fixed;
+  top: 100px;
+  left: 20px;
+  background: rgba(0, 0, 0, 0.9);
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+  max-width: 200px;
+  z-index: 2000;
+  font-size: 0.95rem;
+}
+#notifBox .title {
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+#notifBox .profit {
+  margin-top: 8px;
+  color: #0f0;
+}
+
+/* Persistent hint */
+#selectHint {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: #ffc107;
+  color: #000;
+  padding: 8px 12px;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  font-size: 1rem;
+  z-index: 2000;
+}
+
+body.light-mode {
+  background: #f0f2f5;
+  color: #333;
+}
