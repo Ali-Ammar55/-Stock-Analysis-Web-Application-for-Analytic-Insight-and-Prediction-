@@ -1,10 +1,12 @@
-// Utilities
+// Utility: show error message in top-left
 function showError(msg) {
   const box = document.getElementById("errorBox");
   document.getElementById("errorMsg").textContent = msg;
   box.style.display = "block";
   setTimeout(() => (box.style.display = "none"), 4000);
 }
+
+// Utility: show buy/sell notification in left
 function showNotification(title, details, profitText = "") {
   const box = document.getElementById("notifBox");
   document.getElementById("notifTitle").textContent = title;
@@ -13,35 +15,55 @@ function showNotification(title, details, profitText = "") {
   box.style.display = "block";
   setTimeout(() => (box.style.display = "none"), 4000);
 }
+
+// "Report" button opens mailto with error text
 document.getElementById("reportBtn").onclick = () => {
-  const txt = encodeURIComponent(document.getElementById("errorMsg").textContent);
+  const txt = encodeURIComponent(
+    document.getElementById("errorMsg").textContent
+  );
   location.href = `mailto:support@example.com?subject=Bug Report&body=${txt}`;
 };
 
-// Data & indicators
 const API_KEY = "iuaYSx6MhNpQPwKZ73n31hKZodxwaTNd";
+
+// Fetch last 30 days of historical data from Financial Modeling Prep
 async function fetchFMP(sym) {
-  const url = `https://financialmodelingprep.com/api/v3/historical-price-full/${encodeURIComponent(
-    sym
-  )}?apikey=${API_KEY}`;
-  const res = await fetch(url);
-  const j = await res.json();
-  if (!j.historical) throw new Error("No data for " + sym);
-  return j.historical.slice(0, 30).reverse().map((d) => ({
-    date: d.date,
-    open: d.open,
-    high: d.high,
-    low: d.low,
-    close: d.close,
-    volume: d.volume,
-  }));
+  try {
+    const url = `https://financialmodelingprep.com/api/v3/historical-price-full/${encodeURIComponent(
+      sym
+    )}?apikey=${API_KEY}`;
+    const res = await fetch(url);
+    const j = await res.json();
+    if (!j.historical) throw new Error("No data for " + sym);
+    return j.historical
+      .slice(0, 30)
+      .reverse()
+      .map((d) => ({
+        date: d.date,
+        open: d.open,
+        high: d.high,
+        low: d.low,
+        close: d.close,
+        volume: d.volume,
+      }));
+  } catch (e) {
+    showError(e.message);
+    throw e;
+  }
 }
+
+// Compute 10-day SMA
 function computeSMA(data, p = 10) {
   return data.map((d, i, a) => ({
     date: d.date,
-    sma: i < p - 1 ? null : a.slice(i - p + 1, i + 1).reduce((s, v) => s + v.close, 0) / p,
+    sma:
+      i < p - 1
+        ? null
+        : a.slice(i - p + 1, i + 1).reduce((s, v) => s + v.close, 0) / p,
   }));
 }
+
+// Compute 14-day RSI
 function computeRSI(data, p = 14) {
   let g = 0,
     l = 0;
@@ -60,53 +82,80 @@ function computeRSI(data, p = 14) {
     return { date: d.date, rsi: 100 - 100 / (1 + rs) };
   });
 }
+
+// Compute MACD (12,26)
 function computeMACD(data, f = 12, s = 26) {
-  const ema = (v, n) => {
+  function ema(vals, n) {
     const k = 2 / (n + 1);
-    let e = v[0],
-      o = [e];
-    for (let i = 1; i < v.length; i++) {
-      e = v[i] * k + e * (1 - k);
-      o.push(e);
+    let e = vals[0],
+      out = [e];
+    for (let i = 1; i < vals.length; i++) {
+      e = vals[i] * k + e * (1 - k);
+      out.push(e);
     }
-    return o;
-  };
-  const closes = data.map((d) => d.close),
-    fast = ema(closes, f),
-    slow = ema(closes, s);
-  return data.map((d, i) => ({ date: d.date, macd: fast[i] - slow[i] }));
+    return out;
+  }
+  const closes = data.map((d) => d.close);
+  const fast = ema(closes, f);
+  const slow = ema(closes, s);
+  return data.map((d, i) => ({
+    date: d.date,
+    macd: fast[i] - slow[i],
+  }));
 }
+
+// Compute linear regression for “prediction”
 function linReg(data) {
-  const n = data.length,
-    x = data.map((_, i) => i),
-    y = data.map((d) => d.close),
-    sx = x.reduce((a, b) => a + b, 0),
-    sy = y.reduce((a, b) => a + b, 0),
-    sxy = x.map((v, i) => v * y[i]).reduce((a, b) => a + b, 0),
-    sxx = x.map((v) => v * v).reduce((a, b) => a + b, 0),
-    m = (n * sxy - sx * sy) / (n * sxx - sx * sx),
-    b = (sy - m * sx) / n;
+  const n = data.length;
+  const x = data.map((_, i) => i);
+  const y = data.map((d) => d.close);
+  const sx = x.reduce((a, b) => a + b, 0);
+  const sy = y.reduce((a, b) => a + b, 0);
+  const sxy = x.map((v, i) => v * y[i]).reduce((a, b) => a + b, 0);
+  const sxx = x.map((v) => v * v).reduce((a, b) => a + b, 0);
+  const m = (n * sxy - sx * sy) / (n * sxx - sx * sx);
+  const b = (sy - m * sx) / n;
   return data.map((d, i) => ({ date: d.date, pred: b + m * i }));
 }
 
-// Chart vars
-let root, chart, xAxis, yAxis;
-let lineSeries, candleSeries, volumeSeries;
-let smaSeries, rsiSeries, macdSeries, predSeries;
+// Chart variables
+let root,
+  chart,
+  xAxis,
+  yAxis,
+  lineSeries,
+  candleSeries,
+  volumeSeries,
+  smaSeries,
+  rsiSeries,
+  macdSeries,
+  predSeries;
 let purchase = null,
-  selectedData,
-  highlightBullet = null;
+  selectedData;
+// Keep track of all highlighted bullet sprites
+let highlightedBullets = [];
+
+// DOM references
 const actions = document.getElementById("pointActions"),
   amountInput = document.getElementById("buyAmount"),
   buyBtn = document.getElementById("buyBtn"),
   sellBtn = document.getElementById("sellBtn"),
-  hlBtn = document.getElementById("highlightBtn");
+  hlBtn = document.getElementById("highlightBtn"),
+  rmBtn = document.getElementById("removeHighlightBtn");
 
+// Main “createChart” function (called by am5.ready)
 function createChart() {
-  if (root) root.dispose();
+  // If a previous chart exists, dispose it first
+  if (root) {
+    root.dispose();
+  }
   root = am5.Root.new("chartdiv");
+
+  // Choose themes
   const themes = [];
-  if (isDark) themes.push(am5themes_Dark.new(root));
+  if (isDark) {
+    themes.push(am5themes_Dark.new(root));
+  }
   themes.push(am5themes_Animated.new(root));
   root.setThemes(themes);
 
@@ -119,34 +168,41 @@ function createChart() {
     })
   );
 
+  // X‐axis (Category)
   xAxis = chart.xAxes.push(
     am5xy.CategoryAxis.new(root, {
       categoryField: "date",
       renderer: am5xy.AxisRendererX.new(root, { minGridDistance: 30 }),
     })
   );
-  xAxis.get("renderer").labels.template.setAll({
-    rotation: -45,
-    centerY: am5.p50,
-    centerX: am5.p100,
-    fill: isDark ? am5.color(0xeeeeee) : am5.color(0x333333),
-  });
+  xAxis
+    .get("renderer")
+    .labels.template.setAll({
+      rotation: -45,
+      centerY: am5.p50,
+      centerX: am5.p100,
+      fill: isDark ? am5.color(0xeeeeee) : am5.color(0x333333),
+    });
   xAxis.setAll({ startLocation: 0, endLocation: 1 });
 
+  // Y‐axis (Value)
   yAxis = chart.yAxes.push(
     am5xy.ValueAxis.new(root, {
-      renderer: am5xy.AxisRendererY.new(root, {}),
+      renderer: am5xy.AxisRendererY.new(root, { grid: { strokeOpacity: 0.15 } }),
     })
   );
-  yAxis.get("renderer").labels.template.setAll({
-    fill: isDark ? am5.color(0xeeeeee) : am5.color(0x333333),
-  });
+  yAxis
+    .get("renderer")
+    .labels.template.setAll({
+      fill: isDark ? am5.color(0xeeeeee) : am5.color(0x333333),
+    });
 
+  // 1) Close‐price line series
   lineSeries = chart.series.push(
     am5xy.LineSeries.new(root, {
       name: "Close",
-      xAxis,
-      yAxis,
+      xAxis: xAxis,
+      yAxis: yAxis,
       categoryXField: "date",
       valueYField: "close",
       stroke: am5.color(0x28a745),
@@ -157,17 +213,35 @@ function createChart() {
   );
   lineSeries.strokes.template.setAll({ strokeWidth: 2 });
   lineSeries.setAll({ startLocation: 0, endLocation: 1 });
-  lineSeries.bullets.push((r, ser, dataItem) => {
-    const c = am5.Circle.new(r, { radius: 4, fill: ser.get("stroke") });
-    c.events.on("click", () => {
+
+  // Add clickable bullets to "Close" line
+  lineSeries.bullets.push((root, series, dataItem) => {
+    const circle = am5.Circle.new(root, {
+      radius: 4,
+      fill: series.get("stroke"), // original fill color
+    });
+    circle.events.on("click", (ev) => {
+      // Hide the “Select a point” hint on first click
       document.getElementById("selectHint").style.display = "none";
+
       selectedData = dataItem;
       const px = dataItem.get("valueY").toFixed(2);
       document.getElementById("pointPrice").textContent = `$${px}`;
-      const rect = document.getElementById("chartdiv").getBoundingClientRect();
-      actions.style.left = event.clientX - rect.left + 5 + "px";
-      actions.style.top = event.clientY - rect.top + 5 + "px";
+      const rect = document
+        .getElementById("chartdiv")
+        .getBoundingClientRect();
+      actions.style.left = ev.originalEvent.clientX - rect.left + 5 + "px";
+      actions.style.top = ev.originalEvent.clientY - rect.top + 5 + "px";
       amountInput.value = "";
+
+      // If this bullet is already in highlightedBullets array → show “Remove Highlight”
+      const bulletSprite = dataItem.bullets[0].get("sprite");
+      if (highlightedBullets.includes(bulletSprite)) {
+        rmBtn.style.display = "inline-block";
+      } else {
+        rmBtn.style.display = "none";
+      }
+
       if (!purchase) {
         buyBtn.style.display = "inline-block";
         amountInput.style.display = "inline-block";
@@ -179,33 +253,34 @@ function createChart() {
       }
       actions.style.display = "flex";
     });
-    return am5.Bullet.new(r, { sprite: c });
+    return am5.Bullet.new(root, { sprite: circle });
   });
 
-  // Candles
+  // 2) Candlestick series
   candleSeries = chart.series.push(
     am5xy.CandlestickSeries.new(root, {
       name: "Candlestick",
-      xAxis,
-      yAxis,
+      xAxis: xAxis,
+      yAxis: yAxis,
       categoryXField: "date",
       openValueYField: "open",
       highValueYField: "high",
       lowValueYField: "low",
       valueYField: "close",
       tooltip: am5.Tooltip.new(root, {
-        labelText: "O:{openValueY}\nH:{highValueY}\nL:{lowValueY}\nC:{valueY}",
+        labelText:
+          "O:{openValueY}\nH:{highValueY}\nL:{lowValueY}\nC:{valueY}",
       }),
     })
   );
   candleSeries.set("hidden", true);
 
-  // Volume
+  // 3) Volume series (column)
   volumeSeries = chart.series.push(
     am5xy.ColumnSeries.new(root, {
       name: "Volume",
-      xAxis,
-      yAxis,
+      xAxis: xAxis,
+      yAxis: yAxis,
       categoryXField: "date",
       valueYField: "volume",
       clustered: false,
@@ -215,12 +290,12 @@ function createChart() {
   volumeSeries.columns.template.setAll({ fillOpacity: 0.15 });
   volumeSeries.set("hidden", true);
 
-  // SMA
+  // 4) 10-day SMA
   smaSeries = chart.series.push(
     am5xy.LineSeries.new(root, {
-      name: "SMA(10)",
-      xAxis,
-      yAxis,
+      name: "SMA (10)",
+      xAxis: xAxis,
+      yAxis: yAxis,
       categoryXField: "date",
       valueYField: "sma",
       stroke: am5.color(0xffa500),
@@ -231,12 +306,12 @@ function createChart() {
   );
   smaSeries.setAll({ startLocation: 0, endLocation: 1 });
 
-  // RSI
+  // 5) RSI(14)
   rsiSeries = chart.series.push(
     am5xy.LineSeries.new(root, {
-      name: "RSI(14)",
-      xAxis,
-      yAxis,
+      name: "RSI (14)",
+      xAxis: xAxis,
+      yAxis: yAxis,
       categoryXField: "date",
       valueYField: "rsi",
       stroke: am5.color(0x6f42c1),
@@ -248,12 +323,12 @@ function createChart() {
   rsiSeries.setAll({ startLocation: 0, endLocation: 1 });
   rsiSeries.set("hidden", true);
 
-  // MACD
+  // 6) MACD
   macdSeries = chart.series.push(
     am5xy.LineSeries.new(root, {
       name: "MACD",
-      xAxis,
-      yAxis,
+      xAxis: xAxis,
+      yAxis: yAxis,
       categoryXField: "date",
       valueYField: "macd",
       stroke: am5.color(0xdc3545),
@@ -264,12 +339,12 @@ function createChart() {
   macdSeries.setAll({ startLocation: 0, endLocation: 1 });
   macdSeries.set("hidden", true);
 
-  // Prediction
+  // 7) Prediction (linear regression)
   predSeries = chart.series.push(
     am5xy.LineSeries.new(root, {
       name: "Prediction",
-      xAxis,
-      yAxis,
+      xAxis: xAxis,
+      yAxis: yAxis,
       categoryXField: "date",
       valueYField: "pred",
       stroke: am5.color(0x007bff),
@@ -281,9 +356,10 @@ function createChart() {
   predSeries.setAll({ startLocation: 0, endLocation: 1 });
   predSeries.set("hidden", true);
 
+  // 8) Cursor
   chart.set("cursor", am5xy.XYCursor.new(root, { behavior: "zoomXY" }));
 
-  // Toggle series
+  // 9) Checkbox toggles
   const map = {
     Close: lineSeries,
     Candle: candleSeries,
@@ -293,13 +369,12 @@ function createChart() {
     MACD: macdSeries,
     Pred: predSeries,
   };
-  Object.entries(map).forEach(([k, ser]) => {
-    document.getElementById("chk" + k).onchange = (e) => {
-      e.target.checked ? ser.show() : ser.hide();
-    };
+  Object.entries(map).forEach(([key, series]) => {
+    document.getElementById("chk" + key).onchange = (e) =>
+      e.target.checked ? series.show() : series.hide();
   });
 
-  // Drawing setup
+  // 10) Free-draw setup
   const canvas = document.getElementById("drawCanvas");
   const ctx = canvas.getContext("2d");
   const rect = document.getElementById("chartdiv").getBoundingClientRect();
@@ -307,7 +382,7 @@ function createChart() {
   canvas.height = rect.height;
   let drawing = false,
     strokes = [],
-    currStroke;
+    currStroke = null;
 
   document.getElementById("freeDrawBtn").onclick = () => {
     drawing = !drawing;
@@ -349,7 +424,7 @@ function createChart() {
     });
   }
 
-  // Buy/Sell handlers
+  // 11) Buy behavior
   buyBtn.onclick = () => {
     const qty = parseFloat(amountInput.value);
     if (!qty || qty <= 0) {
@@ -367,34 +442,67 @@ function createChart() {
     );
     actions.style.display = "none";
   };
+
+  // 12) Sell behavior
   sellBtn.onclick = () => {
     if (!purchase) return;
     const sp = selectedData.get("valueY");
     const profit = (sp - purchase.price) * purchase.qty;
     showNotification(
       "Sold",
-      `${purchase.qty} shares @ $${sp.toFixed(2)} on ${selectedData.get("categoryX")}`,
+      `${purchase.qty} shares @ $${sp.toFixed(2)} on ${selectedData.get(
+        "categoryX"
+      )}`,
       `Profit: $${profit.toFixed(2)}`
     );
     purchase = null;
     actions.style.display = "none";
   };
+
+  // 13) Highlight behavior
   hlBtn.onclick = () => {
-    if (highlightBullet) {
-      highlightBullet.setAll({ strokeWidth: 0, fillOpacity: 1 });
+    const bulletSprite = selectedData.bullets[0].get("sprite");
+    if (!highlightedBullets.includes(bulletSprite)) {
+      bulletSprite.setAll({
+        stroke: am5.color(0xff0000),
+        strokeWidth: 3,
+        fillOpacity: 0,
+      });
+      highlightedBullets.push(bulletSprite);
     }
-    const b = selectedData.bullets[0].get("sprite");
-    b.setAll({ stroke: am5.color(0xff0000), strokeWidth: 3, fillOpacity: 0 });
-    highlightBullet = b;
+    // Show the Remove Highlight button whenever this point is already highlighted
+    rmBtn.style.display = highlightedBullets.includes(bulletSprite)
+      ? "inline-block"
+      : "none";
     actions.style.display = "none";
+  };
+
+  // 14) Remove Highlight behavior (no greyed-out style)
+  rmBtn.onclick = () => {
+    const bulletSprite = selectedData.bullets[0].get("sprite");
+    const idx = highlightedBullets.indexOf(bulletSprite);
+    if (idx !== -1) {
+      bulletSprite.setAll({
+        strokeWidth: 0, // remove border
+        stroke: am5.color(0x000000, 0), // fully transparent stroke
+        fill: lineSeries.get("stroke"), // restore original fill color
+        fillOpacity: 1,
+      });
+      highlightedBullets.splice(idx, 1);
+    }
+    // Hide the button again
+    rmBtn.style.display = "none";
   };
 
   updateChart();
 }
 
+// Keep track of dark/light mode
 let isDark = true;
+
 function updateChart() {
-  const sym = document.getElementById("symbolInput").value.trim() || "AAPL";
+  const sym =
+    document.getElementById("symbolInput").value.trim() || "AAPL";
   fetchFMP(sym)
     .then((data) => {
       xAxis.data.setAll(data);
@@ -405,16 +513,24 @@ function updateChart() {
       rsiSeries.data.setAll(computeRSI(data, 14));
       macdSeries.data.setAll(computeMACD(data, 12, 26));
       predSeries.data.setAll(linReg(data));
-      document.getElementById("cardSMA").textContent = smaSeries.dataItems
-        .filter((di) => di.dataContext.sma !== null)
-        .pop().dataContext.sma.toFixed(2);
-      document.getElementById("cardRSI").textContent = rsiSeries.dataItems
-        .filter((di) => di.dataContext.rsi !== null)
-        .pop().dataContext.rsi.toFixed(2);
-      document.getElementById("cardMACD").textContent = macdSeries.dataItems
-        .pop().dataContext.macd.toFixed(2);
-      document.getElementById("cardPred").textContent = predSeries.dataItems
-        .pop().dataContext.pred.toFixed(2);
+
+      // Update metric cards
+      document.getElementById("cardSMA").textContent =
+        smaSeries.dataItems
+          .filter((di) => di.dataContext.sma !== null)
+          .pop()
+          .dataContext.sma.toFixed(2);
+      document.getElementById("cardRSI").textContent =
+        rsiSeries.dataItems
+          .filter((di) => di.dataContext.rsi !== null)
+          .pop()
+          .dataContext.rsi.toFixed(2);
+      document.getElementById("cardMACD").textContent =
+        macdSeries.dataItems.pop().dataContext.macd.toFixed(2);
+      document.getElementById("cardPred").textContent =
+        predSeries.dataItems.pop().dataContext.pred.toFixed(2);
+
+      // Default visibility
       candleSeries.hide();
       volumeSeries.hide();
       smaSeries.show();
@@ -427,6 +543,7 @@ function updateChart() {
       document.getElementById("chkClose").checked = true;
       document.getElementById("chkSMA").checked = true;
       document.getElementById("drawCanvas").style.display = "none";
+
       chart.zoomOut();
     })
     .catch((e) => {
@@ -434,12 +551,18 @@ function updateChart() {
     });
 }
 
-// Initialize
+// Initialize on amCharts ready
 am5.ready(createChart);
+
+// Search button
 document.getElementById("searchBtn").onclick = updateChart;
+
+// Toggle light/dark
 document.getElementById("toggleTheme").onclick = () => {
   isDark = !isDark;
   document.body.classList.toggle("light-mode", !isDark);
-  document.getElementById("toggleTheme").textContent = isDark ? "🌙" : "☀️";
+  document.getElementById("toggleTheme").textContent = isDark
+    ? "🌙"
+    : "☀️";
   createChart();
 };
